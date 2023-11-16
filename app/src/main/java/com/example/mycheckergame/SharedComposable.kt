@@ -22,7 +22,7 @@ import kotlin.math.min
 
 @Composable
 fun DraughtsCanvas(
-    drawContent: DrawScope.() -> Unit
+    drawPieces: DrawScope.() -> Unit
 ) {
     Box{
         Canvas(
@@ -32,7 +32,7 @@ fun DraughtsCanvas(
             // The checkerboard
             drawCheckerboard()
             // Additional content using the provided lambda
-            drawContent()
+            drawPieces()
         }
     }
 }
@@ -42,7 +42,7 @@ private fun DrawScope.drawCheckerboard() {
     for (row in 0 until 8) {
         for (col in 0 until 8) {
             drawRect(
-                color = if ((row + col) % 2 == 0) Color.White else Color.Black,
+                color = if ((row + col) % 2 == 0) Color.LightGray else Color.DarkGray,
                 topLeft = Offset(col * squareSize, row * squareSize),
                 size = Size(squareSize, squareSize)
             )
@@ -65,7 +65,7 @@ private fun DrawScope.drawPieces() {
     //Player 2 pieces in blue
     player2Positions.forEach { (col, row) ->
         drawCircle(
-            color = Color.Blue,
+            color = Color.Green,
             center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
             radius = pieceRadius
         )
@@ -73,7 +73,6 @@ private fun DrawScope.drawPieces() {
 
 
 }
-
 
 @Composable
 fun DraughtsGameScreen() {
