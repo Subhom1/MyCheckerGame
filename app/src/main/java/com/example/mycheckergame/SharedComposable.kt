@@ -6,9 +6,11 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,7 +25,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.absoluteValue
@@ -34,19 +39,19 @@ enum class Player {
     PLAYER2
 }
 @Composable
-fun DraughtsCanvas(currentPlayer: MutableState<Player>, onPlayerChanged: (Player) -> Unit) {
+fun DraughtsCanvas(currentPlayer: MutableState<Player>,player1Point:MutableState<Int>,player2Point:MutableState<Int>,onPlayerChanged: (Player) -> Unit) {
     var selectedPiece: Pair<Int, Int>? by remember { mutableStateOf(null) }
-    var player1Positions by remember {mutableStateOf(listOf(1 to 0,3 to 0,5 to 0,7 to 0,0 to 1,2 to 1,4 to 1,6 to 1,1 to 2,3 to 2,5 to 2,7 to 2))}
-    var player2Positions by remember {mutableStateOf(listOf(0 to 5,2 to 5,4 to 5,6 to 5,1 to 6,3 to 6,5 to 6,7 to 6,0 to 7,2 to 7,4 to 7,6 to 7))}
+    var player1Positions by remember {mutableStateOf(listOf(0 to 5,2 to 5,4 to 5,6 to 5,1 to 6,3 to 6,5 to 6,7 to 6,0 to 7,2 to 7,4 to 7,6 to 7))}
+    var player2Positions by remember {mutableStateOf(listOf(1 to 0,3 to 0,5 to 0,7 to 0,0 to 1,2 to 1,4 to 1,6 to 1,1 to 2,3 to 2,5 to 2,7 to 2))}
     Box(
             modifier =
                     Modifier.pointerInput(Unit) {
                         detectTapGestures { offset ->
                             val col = (offset.x / size.width * 8).toInt()
                             val row = (offset.y / size.height * 8).toInt()
-
+                            val isBlackSquare = (col + row) % 2 != 0
                             // Checks if the tapped position is in a black square
-                            if ((col + row) % 2 != 0) {
+                            if (isBlackSquare) {
                                 if (selectedPiece == null) {
                                     // If no piece is selected, checks if there's a piece at the tapped location for the current player
                                     val validPlayerPositions =
@@ -59,18 +64,51 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>, onPlayerChanged: (Player
                                 } else {
                                     // If a piece is already selected, check if the move is valid
                                     selectedPiece?.let { selected ->
-                                        val isValidMove =
-                                                (col + row) % 2 != 0 && // Move to a black square
-                                                (col - selected.first).absoluteValue == 1 && // Moves only one column
-                                                (row - selected.second).absoluteValue == 1 && // Moves only one row
-                                                !player1Positions.contains(col to row) && // Destination should be empty for player 1
-                                                !player2Positions.contains(col to row) // Destination should be empty for player 2
+                                        val selectedRow = selected.second
+                                        val selectedCol = selected.first
+                                        val oneHopDiagonal = ((col - selected.first).absoluteValue == 1 && (row - selected.second).absoluteValue == 1)
+                                        val twoHopDiagonal = ((col - selected.first).absoluteValue == 2 && (row - selected.second).absoluteValue == 2)
+                                        val ply1MoveUpward = ((currentPlayer.value == Player.PLAYER1 && row < selected.second) && !player2Positions.contains(col to row) && !player1Positions.contains(col to row))
+                                        val ply2MoveDownward = ((currentPlayer.value == Player.PLAYER2 && row > selected.second) && !(player1Positions).contains(col to row) && !player2Positions.contains(col to row))
+                                        val isMovable = (ply1MoveUpward||ply2MoveDownward)
+                                        var isValidMove = false
+                                        if(oneHopDiagonal && isMovable){
+                                            isValidMove = true
+                                        }else if(twoHopDiagonal && isMovable){
+                                            if(currentPlayer.value == Player.PLAYER1){
+                                                if (
+                                                    player2Positions.contains((selectedCol + 1) to (selectedRow - 1)) ||
+                                                    player2Positions.contains((selectedCol - 1) to (selectedRow - 1))
+                                                ) {
+                                                    val cord = if (player2Positions.contains((selectedCol + 1) to (selectedRow - 1))) ( (selectedCol + 1) to (selectedRow - 1))else ((selectedCol - 1) to (selectedRow - 1))
+                                                    isValidMove = true
+                                                    player2Positions = player2Positions.toMutableList().apply {
+                                                        removeIf { it == cord }
+                                                    }
+                                                    player1Point.value+=1
+                                                }
+
+                                            }
+                                            else{
+                                                if (
+                                                    player1Positions.contains((selectedCol + 1) to (selectedRow + 1)) ||
+                                                    player1Positions.contains((selectedCol - 1) to (selectedRow + 1))
+                                                ) {
+                                                    val cord = if (player1Positions.contains((selectedCol + 1) to (selectedRow + 1))) ( (selectedCol + 1) to (selectedRow + 1))else ((selectedCol - 1) to (selectedRow + 1))
+                                                    isValidMove = true
+                                                    player1Positions = player1Positions.toMutableList().apply {
+                                                        removeIf { it == cord }
+                                                    }
+                                                    player2Point.value+=1
+                                                }
+                                            }
+                                        }
                                         if (isValidMove) {
                                             // Updates the positions based on the selected piece for the current player
                                             if (currentPlayer.value == Player.PLAYER1) {
                                                 player1Positions = player1Positions - selected + (col to row)
                                             } else {
-                                                player2Positions = player2Positions - selected + (col to row)
+                                                    player2Positions = player2Positions - selected + (col to row)
                                             }
 
                                             // Reset the selected piece and switch the current player
@@ -80,6 +118,14 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>, onPlayerChanged: (Player
                                                             Player.PLAYER2
                                                     else Player.PLAYER1
                                             )
+                                        }else {
+                                            // If the move is not valid, check if there's another piece for the current player at the tapped location
+                                            val validPlayerPositions =
+                                                if (currentPlayer.value == Player.PLAYER1) player1Positions else player2Positions
+                                            if (validPlayerPositions.contains(col to row)) {
+                                                // Select the new piece for the current player
+                                                selectedPiece = col to row
+                                            }
                                         }
                                     }
                                 }
@@ -117,7 +163,6 @@ private fun DrawScope.drawPieces(
     val squareSize = size.width / 8
     val pieceRadius = squareSize / 3
 
-    // Player 1 pieces in red
     player1Positions.forEach { (col, row) ->
         drawCircle(
                 color = Color.Red,
@@ -125,7 +170,6 @@ private fun DrawScope.drawPieces(
                 radius = pieceRadius
         )
     }
-    // Player 2 pieces in blue
     player2Positions.forEach { (col, row) ->
         drawCircle(
                 color = Color.Green,
@@ -133,26 +177,26 @@ private fun DrawScope.drawPieces(
                 radius = pieceRadius
         )
     }
-    // Draw the selected piece with a different color (e.g., green)
     selectedPiece?.let { (col, row) ->
         drawCircle(
                 color = Color.Yellow,
                 center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
-                radius = pieceRadius
+                radius = pieceRadius,
         )
     }
 }
 
 var currentPlayer = mutableStateOf(Player.PLAYER1)
-
+var player1Point = mutableStateOf(0)
+var player2Point = mutableStateOf(0)
 @Composable
 fun DraughtsGameScreen() {
-
     Column(
             modifier =
-                    Modifier.background(color = Color.Gray)
-                            .fillMaxSize()
-                            .padding(top = 55.dp, start = 20.dp, end = 25.dp)
+            Modifier
+                .background(color = Color.Gray)
+                .fillMaxSize()
+                .padding(top = 55.dp, start = 20.dp, end = 25.dp)
     ) {
         Text(
                 "Game of Draughts",
@@ -168,10 +212,39 @@ fun DraughtsGameScreen() {
                     color = if (currentPlayer.value == Player.PLAYER1) Color.Red else Color.Green
             )
         }
-        DraughtsCanvas(currentPlayer = currentPlayer) { newPlayer ->
+        DraughtsCanvas(currentPlayer = currentPlayer, player1Point= player1Point, player2Point= player2Point) { newPlayer ->
             currentPlayer.value = newPlayer
         }
+Row(modifier = Modifier.padding(top=20.dp)) {
+    Text(
+        buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                append("Player ")
+            }
+            withStyle(style = SpanStyle(color = Color.Red, fontWeight = FontWeight.Bold)) {
+                append("Red  ")
+            }
+            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                append("${player1Point.value}")
+            }
+        }
+    )
+    Spacer(modifier = Modifier.width(20.dp))
+    Text(
+        buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                append("Player ")
+            }
+            withStyle(style = SpanStyle(color = Color.Green, fontWeight = FontWeight.Bold)) {
+                append("Green ")
+            }
+            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                append(" ${player2Point.value}")
+            }
+        }
+    )
 
+}
         ResetButton()
     }
 }
