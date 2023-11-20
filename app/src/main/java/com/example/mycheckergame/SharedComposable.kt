@@ -1,5 +1,6 @@
 package com.example.mycheckergame
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -36,13 +37,19 @@ import kotlin.math.min
 
 enum class Player {
     PLAYER1,
-    PLAYER2
+    PLAYER2;
+    val isKing: Boolean
+        get() = this == PLAYER1
 }
 @Composable
 fun DraughtsCanvas(currentPlayer: MutableState<Player>,player1Point:MutableState<Int>,player2Point:MutableState<Int>,onPlayerChanged: (Player) -> Unit) {
     var selectedPiece: Pair<Int, Int>? by remember { mutableStateOf(null) }
     var player1Positions by remember {mutableStateOf(listOf(0 to 5,2 to 5,4 to 5,6 to 5,1 to 6,3 to 6,5 to 6,7 to 6,0 to 7,2 to 7,4 to 7,6 to 7))}
+    var player1KingPositions by remember {mutableStateOf(listOf(1 to 0, 3 to 0,5 to 0, 7 to 0 ))}
     var player2Positions by remember {mutableStateOf(listOf(1 to 0,3 to 0,5 to 0,7 to 0,0 to 1,2 to 1,4 to 1,6 to 1,1 to 2,3 to 2,5 to 2,7 to 2))}
+    var player2KingPositions by remember {mutableStateOf(listOf(0 to 7,2 to 7,4 to 7,6 to 7))}
+    var ply1Kings: MutableList<Pair<Int, Int>> = mutableListOf()
+    var ply2Kings: MutableList<Pair<Int, Int>> = mutableListOf()
     Box(
             modifier =
                     Modifier.pointerInput(Unit) {
@@ -66,10 +73,12 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,player1Point:MutableState
                                     selectedPiece?.let { selected ->
                                         val selectedRow = selected.second
                                         val selectedCol = selected.first
+                                        val isPly1King = player1KingPositions.contains(col to row)
+                                        Log.d("Log-","$isPly1King")
                                         val oneHopDiagonal = ((col - selected.first).absoluteValue == 1 && (row - selected.second).absoluteValue == 1)
                                         val twoHopDiagonal = ((col - selected.first).absoluteValue == 2 && (row - selected.second).absoluteValue == 2)
-                                        val ply1MoveUpward = ((currentPlayer.value == Player.PLAYER1 && row < selected.second) && !player2Positions.contains(col to row) && !player1Positions.contains(col to row))
-                                        val ply2MoveDownward = ((currentPlayer.value == Player.PLAYER2 && row > selected.second) && !(player1Positions).contains(col to row) && !player2Positions.contains(col to row))
+                                        val ply1MoveUpward = (currentPlayer.value == Player.PLAYER1 &&  row < selected.second && !player2Positions.contains(col to row) && !player1Positions.contains(col to row))
+                                        val ply2MoveDownward = (currentPlayer.value == Player.PLAYER2 && row > selected.second && !(player1Positions).contains(col to row) && !player2Positions.contains(col to row))
                                         val isMovable = (ply1MoveUpward||ply2MoveDownward)
                                         var isValidMove = false
                                         if(oneHopDiagonal && isMovable){
@@ -107,8 +116,14 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,player1Point:MutableState
                                             // Updates the positions based on the selected piece for the current player
                                             if (currentPlayer.value == Player.PLAYER1) {
                                                 player1Positions = player1Positions - selected + (col to row)
+                                                if(player1KingPositions.contains(col to row)){
+                                                   ply1Kings.add(col to row)
+                                                }
                                             } else {
                                                     player2Positions = player2Positions - selected + (col to row)
+                                                if(player2KingPositions.contains(col to row)){
+                                                    ply2Kings.add(col to row)
+                                                }
                                             }
 
                                             // Reset the selected piece and switch the current player
@@ -137,7 +152,7 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,player1Point:MutableState
             // The checkerboard
             drawCheckerboard()
             // Drawing pieces
-            drawPieces(selectedPiece, player1Positions, player2Positions)
+            drawPieces(selectedPiece, player1Positions, player2Positions, ply1Kings, ply2Kings)
         }
     }
 }
@@ -156,35 +171,64 @@ private fun DrawScope.drawCheckerboard() {
 }
 
 private fun DrawScope.drawPieces(
-        selectedPiece: Pair<Int, Int>?,
-        player1Positions: List<Pair<Int, Int>>,
-        player2Positions: List<Pair<Int, Int>>
+    selectedPiece: Pair<Int, Int>?,
+    player1Positions: List<Pair<Int, Int>>,
+    player2Positions: List<Pair<Int, Int>>,
+    ply1Kings: List<Pair<Int, Int>>,
+    ply2Kings: List<Pair<Int, Int>>,
+
 ) {
     val squareSize = size.width / 8
     val pieceRadius = squareSize / 3
+    val kingSymbolRadius = pieceRadius / 2
 
     player1Positions.forEach { (col, row) ->
         drawCircle(
-                color = Color.Red,
-                center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
-                radius = pieceRadius
+            color = Color.Red,
+            center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
+            radius = pieceRadius
         )
+        if(ply1Kings.contains(col to row)) drawKingSymbol((col + 0.5f) * squareSize, (row + 0.5f) * squareSize, kingSymbolRadius)
     }
+
     player2Positions.forEach { (col, row) ->
         drawCircle(
-                color = Color.Green,
-                center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
-                radius = pieceRadius
+            color = Color.Green,
+            center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
+            radius = pieceRadius
         )
+        if(ply2Kings.contains(col to row)) drawKingSymbol((col + 0.5f) * squareSize, (row + 0.5f) * squareSize, kingSymbolRadius)
+
     }
     selectedPiece?.let { (col, row) ->
         drawCircle(
-                color = Color.Yellow,
-                center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
-                radius = pieceRadius,
+            color = Color.Yellow,
+            center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
+            radius = pieceRadius,
         )
     }
 }
+
+private fun DrawScope.drawKingSymbol(x: Float, y: Float, radius: Float) {
+    drawCircle(
+        color = Color.White,
+        center = Offset(x, y),
+        radius = radius
+    )
+    drawLine(
+        color = Color.Black,
+        start = Offset(x - radius / 2, y - radius / 2),
+        end = Offset(x + radius / 2, y + radius / 2),
+        strokeWidth = radius / 10
+    )
+    drawLine(
+        color = Color.Black,
+        start = Offset(x - radius / 2, y + radius / 2),
+        end = Offset(x + radius / 2, y - radius / 2),
+        strokeWidth = radius / 10
+    )
+}
+
 
 var currentPlayer = mutableStateOf(Player.PLAYER1)
 var player1Point = mutableStateOf(0)
@@ -219,7 +263,7 @@ Row(modifier = Modifier.padding(top=20.dp)) {
     Text(
         buildAnnotatedString {
             withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                append("Player ")
+                append("Player1 ")
             }
             withStyle(style = SpanStyle(color = Color.Red, fontWeight = FontWeight.Bold)) {
                 append("Red  ")
@@ -233,7 +277,7 @@ Row(modifier = Modifier.padding(top=20.dp)) {
     Text(
         buildAnnotatedString {
             withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                append("Player ")
+                append("Player2 ")
             }
             withStyle(style = SpanStyle(color = Color.Green, fontWeight = FontWeight.Bold)) {
                 append("Green ")
