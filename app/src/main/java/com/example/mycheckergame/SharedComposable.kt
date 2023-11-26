@@ -9,15 +9,24 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -85,8 +94,8 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,
                                         }else if(twoHopDiagonal && isMovable){
                                             if(currentPlayer.value == Player.PLAYER1){
                                                 if (
-                                                    player2Positions.contains((selectedCol + 1) to (selectedRow - 1)) ||
-                                                    player2Positions.contains((selectedCol - 1) to (selectedRow - 1))
+                                                    (player2Positions.contains((selectedCol + 1) to (selectedRow - 1)) ||
+                                                    player2Positions.contains((selectedCol - 1) to (selectedRow - 1))) && !ply1Kings.contains(selectedCol to selectedRow)
                                                 ) {
                                                     val cord = if (player2Positions.contains((selectedCol + 1) to (selectedRow - 1)) &&(((selectedCol + 1) to (selectedRow - 1)) == (col-1 to row+1)))
                                                             ((selectedCol + 1) to (selectedRow - 1))
@@ -114,8 +123,8 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,
                                             }
                                             else{
                                                 if (
-                                                    player1Positions.contains((selectedCol + 1) to (selectedRow + 1)) ||
-                                                    player1Positions.contains((selectedCol - 1) to (selectedRow + 1))
+                                                    (player1Positions.contains((selectedCol + 1) to (selectedRow + 1)) ||
+                                                    player1Positions.contains((selectedCol - 1) to (selectedRow + 1)))  && !ply2Kings.contains(selectedCol to selectedRow)
                                                 ) {
                                                     val cord = if (player1Positions.contains((selectedCol + 1) to (selectedRow + 1)) &&  (((selectedCol + 1) to (selectedRow + 1))== (col-1 to row-1)))
                                                             ((selectedCol + 1) to (selectedRow + 1))
@@ -137,7 +146,7 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,
                                                     player1Positions.apply {
                                                         removeIf { it == cord }
                                                     }
-                                                    player1Point.value+=1
+                                                    player2Point.value+=1
                                                 }
                                             }
                                         }
@@ -204,7 +213,7 @@ private fun DrawScope.drawCheckerboard() {
     for (row in 0 until 8) {
         for (col in 0 until 8) {
             drawRect(
-                    color = if ((row + col) % 2 == 0) Color.LightGray else Color.DarkGray,
+                    color = if ((row + col) % 2 == 0) Color(red.value-1, green.value-1, blue.value-1) else Color(red.value, green.value, blue.value),
                     topLeft = Offset(col * squareSize, row * squareSize),
                     size = Size(squareSize, squareSize)
             )
@@ -226,7 +235,7 @@ private fun DrawScope.drawPieces(
 
     player1Positions.forEach { (col, row) ->
         drawCircle(
-            color = Color.Red,
+            color = Color(1-redPiece.value, 1-greenPiece.value, 1-bluePiece.value),
             center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
             radius = pieceRadius
         )
@@ -235,7 +244,7 @@ private fun DrawScope.drawPieces(
 
     player2Positions.forEach { (col, row) ->
         drawCircle(
-            color = Color.Green,
+            color = Color(redPiece.value, greenPiece.value, bluePiece.value),
             center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
             radius = pieceRadius
         )
@@ -315,9 +324,9 @@ fun DraughtsGameScreen() {
         Row(modifier = Modifier.padding(bottom = 15.dp)) {
             Text("Current Player: ", fontWeight = FontWeight.Bold)
             Text(
-                    if (currentPlayer.value == Player.PLAYER1) "Red" else "Green",
+                    if (currentPlayer.value == Player.PLAYER1) "One" else "Two",
                     fontWeight = FontWeight.Bold,
-                    color = if (currentPlayer.value == Player.PLAYER1) Color.Red else Color.Green
+                    color = if (currentPlayer.value == Player.PLAYER1) Color(1 - redPiece.value, 1 - greenPiece.value, 1 - bluePiece.value) else Color(redPiece.value, greenPiece.value, bluePiece.value)
             )
         }
         DraughtsCanvas(currentPlayer, player1Point, player2Point,
@@ -331,36 +340,33 @@ fun DraughtsGameScreen() {
             currentPlayer.value = newPlayer
         }
 Row(modifier = Modifier.padding(top=20.dp)) {
-    Text(
-        buildAnnotatedString {
-            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                append("Player1 ")
-            }
-            withStyle(style = SpanStyle(color = Color.Red, fontWeight = FontWeight.Bold)) {
-                append("Red  ")
-            }
-            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                append("${player1Point.value}")
-            }
-        }
+    Text("Player One ",fontWeight = FontWeight.Bold)
+    Box(
+        modifier = Modifier
+            .width(17.dp)
+            .height(17.dp)
+            .background(Color(1 - redPiece.value, 1 - greenPiece.value, 1 - bluePiece.value),CircleShape)
     )
+    Text(" :  ${player1Point.value}",fontWeight = FontWeight.Bold)
+
     Spacer(modifier = Modifier.width(20.dp))
-    Text(
-        buildAnnotatedString {
-            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                append("Player2 ")
-            }
-            withStyle(style = SpanStyle(color = Color.Green, fontWeight = FontWeight.Bold)) {
-                append("Green ")
-            }
-            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                append(" ${player2Point.value}")
-            }
-        }
+    Text("Player Two ",fontWeight = FontWeight.Bold)
+    Box(
+        modifier = Modifier
+            .width(17.dp)
+            .height(17.dp)
+            .background(Color(redPiece.value, greenPiece.value, bluePiece.value), CircleShape)
     )
+    Text(" :  ${player2Point.value}",fontWeight = FontWeight.Bold)
 
 }
         ResetButton( onReset = { resetPlayerPositions() })
+
+        Row{
+            ColorPicker("Board")
+            Spacer(modifier = Modifier.width(50.dp))
+            ColorPickerPiece("Pieces")
+        }
 
     }
 }
@@ -370,4 +376,82 @@ fun ResetButton(onReset: () ->Unit) {
     Button(modifier = Modifier.padding(top = 35.dp), onClick = {
         onReset()
     }) { Text("Reset Game") }
+}
+var red = mutableStateOf(0)
+var green =mutableStateOf(0)
+var blue = mutableStateOf(0)
+@Composable
+fun ColorPicker(header:String) {
+    Column{
+        Text("$header", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        // Red Slider
+        Row(verticalAlignment = Alignment.CenterVertically){
+            Text("Red", modifier = Modifier.width(50.dp))
+            Slider(
+                value = red.value.toFloat(),
+                onValueChange = { red.value = it.toInt() },
+                valueRange = 0f..255f,
+                modifier = Modifier.width(100.dp)
+            )
+        }
+        // Green Slider
+        Row(verticalAlignment = Alignment.CenterVertically){
+            Text("Green",modifier = Modifier.width(50.dp))
+            Slider(
+                value = green.value.toFloat(),
+                onValueChange = { green.value = it.toInt() },
+                valueRange = 0f..255f,
+                modifier = Modifier.width(100.dp)
+            )
+        }
+        // Blue Slider
+        Row(verticalAlignment = Alignment.CenterVertically){
+            Text("Blue",modifier = Modifier.width(50.dp))
+            Slider(
+                value = blue.value.toFloat(),
+                onValueChange = { blue.value = it.toInt() },
+                valueRange = 0f..255f,
+                modifier = Modifier.width(100.dp)
+            )
+        }
+    }
+}
+var redPiece = mutableStateOf(2)
+var greenPiece =mutableStateOf(255)
+var bluePiece = mutableStateOf(0)
+@Composable
+fun ColorPickerPiece(header:String) {
+    Column{
+        Text("$header", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        // Red Slider
+        Row(verticalAlignment = Alignment.CenterVertically){
+            Text("Red", modifier = Modifier.width(50.dp))
+            Slider(
+                value = redPiece.value.toFloat(),
+                onValueChange = { redPiece.value = it.toInt() },
+                valueRange = 0f..255f,
+                modifier = Modifier.width(100.dp)
+            )
+        }
+        // Green Slider
+        Row(verticalAlignment = Alignment.CenterVertically){
+            Text("Green",modifier = Modifier.width(50.dp))
+            Slider(
+                value = greenPiece.value.toFloat(),
+                onValueChange = { greenPiece.value = it.toInt() },
+                valueRange = 0f..255f,
+                modifier = Modifier.width(100.dp)
+            )
+        }
+        // Blue Slider
+        Row(verticalAlignment = Alignment.CenterVertically){
+            Text("Blue",modifier = Modifier.width(50.dp))
+            Slider(
+                value = bluePiece.value.toFloat(),
+                onValueChange = { bluePiece.value = it.toInt() },
+                valueRange = 0f..255f,
+                modifier = Modifier.width(100.dp)
+            )
+        }
+    }
 }
