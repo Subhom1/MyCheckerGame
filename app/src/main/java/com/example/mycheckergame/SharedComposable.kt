@@ -1,5 +1,6 @@
 package com.example.mycheckergame
 
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,7 +28,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -155,6 +159,10 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,
                                                     ply1Kings.addAll(listOf(col to row))
 
                                                 }
+                                                var capturePos = checkChainCaptures((col to row), currentPlayer.value)
+                                                if(capturePos.isNotEmpty()){
+                                                    Log.d("Log-","$capturePos")
+                                                }
                                             } else {
                                                 player2Positions.remove(selected)
                                                 player2Positions.add(col to row)
@@ -168,14 +176,13 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,
                                                 }
 
                                             }
-
                                             // Reset the selected piece and switch the current player
-                                            selectedPiece.value = null
-                                            onPlayerChanged(
+                                                selectedPiece.value = null
+                                                onPlayerChanged(
                                                     if (currentPlayer.value == Player.PLAYER1)
-                                                            Player.PLAYER2
+                                                        Player.PLAYER2
                                                     else Player.PLAYER1
-                                            )
+                                                )
                                         }else {
                                             // If the move is not valid, check if there's another piece for the current player at the tapped location
                                             val validPlayerPositions =
@@ -202,12 +209,26 @@ fun DraughtsCanvas(currentPlayer: MutableState<Player>,
 
 private fun DrawScope.drawCheckerboard() {
     val squareSize = min(size.width, size.height) / 8
+    val textPaint = android.graphics.Paint().apply {
+        textSize = squareSize/3
+        color = Color.White.toArgb()
+    }
     for (row in 0 until 8) {
         for (col in 0 until 8) {
             drawRect(
                     color = if ((row + col) % 2 == 0) Color(red.value-1, green.value-1, blue.value-1) else Color(red.value, green.value, blue.value),
                     topLeft = Offset(col * squareSize, row * squareSize),
                     size = Size(squareSize, squareSize)
+            )
+
+
+            // Draw the text for the piece (col, row)
+            val text = "$col, $row"
+            drawContext.canvas.nativeCanvas.drawText(
+                text,
+                (col + 0.5f) * squareSize - (squareSize/3) / 2,
+                (row + 0.5f) * squareSize + (squareSize/3) / 2,
+                textPaint
             )
         }
     }
@@ -224,21 +245,44 @@ private fun DrawScope.drawPieces(
     val squareSize = size.width / 8
     val pieceRadius = squareSize / 3
     val kingSymbolRadius = pieceRadius / 2
-
+    val textPaint = android.graphics.Paint().apply {
+        textSize = pieceRadius
+        color = Color.White.toArgb()
+    }
     player1Positions.forEach { (col, row) ->
         drawCircle(
-            color = Color(1-redPiece.value, 1-greenPiece.value, 1-bluePiece.value),
+            color = Color(1 - redPiece.value, 1 - greenPiece.value, 1 - bluePiece.value),
             center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
             radius = pieceRadius
         )
-        if(ply1Kings.contains(col to row)) drawKingSymbol((col + 0.5f) * squareSize, (row + 0.5f) * squareSize, kingSymbolRadius)
+        // Draw the text for the piece (col, row)
+        val text = "$col, $row"
+        drawContext.canvas.nativeCanvas.drawText(
+            text,
+            (col + 0.5f) * squareSize - (squareSize/3) / 2,
+            (row + 0.5f) * squareSize + (squareSize/3) / 2,
+            textPaint
+        )
+        // Draw the king symbol if applicable
+        if (ply1Kings.contains(col to row)) {
+            drawKingSymbol((col + 0.5f) * squareSize, (row + 0.5f) * squareSize, kingSymbolRadius)
+        }
     }
+
 
     player2Positions.forEach { (col, row) ->
         drawCircle(
             color = Color(redPiece.value, greenPiece.value, bluePiece.value),
             center = Offset((col + 0.5f) * squareSize, (row + 0.5f) * squareSize),
             radius = pieceRadius
+        )
+        // Draw the text for the piece (col, row)
+        val text = "$col, $row"
+        drawContext.canvas.nativeCanvas.drawText(
+            text,
+            (col + 0.5f) * squareSize - (squareSize/3) / 2,
+            (row + 0.5f) * squareSize + (squareSize/3) / 2,
+            textPaint
         )
         if(ply2Kings.contains(col to row)) drawKingSymbol((col + 0.5f) * squareSize, (row + 0.5f) * squareSize, kingSymbolRadius)
 
@@ -298,6 +342,12 @@ fun DraughtsGameScreen() {
         player2Point.value = 0
         currentPlayer.value = Player.PLAYER1
         selectedPiece.value = null
+        red.value=0
+        green.value=0
+        blue.value=0
+        redPiece.value=2
+        greenPiece.value=255
+        bluePiece.value=0
     }
 
     Column(
@@ -305,7 +355,7 @@ fun DraughtsGameScreen() {
             Modifier
                 .background(color = Color.Gray)
                 .fillMaxSize()
-                .padding(top = 55.dp, start = 20.dp, end = 25.dp)
+                .padding(vertical = 20.dp, horizontal= 20.dp)
     ) {
         Text(
                 "Game of Draughts",
@@ -337,7 +387,10 @@ Row(modifier = Modifier.padding(top=20.dp)) {
         modifier = Modifier
             .width(17.dp)
             .height(17.dp)
-            .background(Color(1 - redPiece.value, 1 - greenPiece.value, 1 - bluePiece.value),CircleShape)
+            .background(
+                Color(1 - redPiece.value, 1 - greenPiece.value, 1 - bluePiece.value),
+                CircleShape
+            )
     )
     Text(" :  ${player1Point.value}",fontWeight = FontWeight.Bold)
 
@@ -447,3 +500,70 @@ fun ColorPickerPiece(header:String) {
         }
     }
 }
+
+private fun checkChainCaptures(position: Pair<Int, Int>, currentPlayer: Player): List<Pair<Int, Int>> {
+    val captures = mutableListOf<Pair<Int, Int>>()
+
+    // Check for chain captures in all possible directions
+    captures.addAll(checkChainCaptureInDirection(position, currentPlayer, 1, 1)) // Top right
+    captures.addAll(checkChainCaptureInDirection(position, currentPlayer, 1, -1)) // Bottom right
+    captures.addAll(checkChainCaptureInDirection(position, currentPlayer, -1, 1)) // Top left
+    captures.addAll(checkChainCaptureInDirection(position, currentPlayer, -1, -1)) // Bottom left
+
+    return captures
+}
+
+private fun checkChainCaptureInDirection(
+    position: Pair<Int, Int>,
+    currentPlayer: Player,
+    rowDirection: Int,
+    colDirection: Int
+): List<Pair<Int, Int>> {
+    val captures = mutableListOf<Pair<Int, Int>>()
+
+    val (startCol, startRow) = position
+    var currentCol = startCol + colDirection
+    var currentRow = startRow + rowDirection
+
+    while (isValidPosition(currentCol, currentRow)) {
+        val currentPosition = currentCol to currentRow
+
+        if (isOpponentPiece(currentPosition, currentPlayer)) {
+            // Check if there is an opponent piece in the current position
+            val nextCol = currentCol + colDirection
+            val nextRow = currentRow + rowDirection
+
+            if (isValidPosition(nextCol, nextRow) && isEmptyPosition(nextCol, nextRow)) {
+                // Check if the next position is empty for a potential capture
+                captures.add(nextCol to nextRow)
+                currentCol = nextCol
+                currentRow = nextRow
+            } else {
+                // No more captures in this direction
+                break
+            }
+        } else {
+            // No opponent piece in the current position
+            break
+        }
+    }
+
+    return captures
+}
+
+private fun isValidPosition(col: Int, row: Int): Boolean {
+    return col in 0 until 8 && row in 0 until 8
+}
+
+private fun isOpponentPiece(position: Pair<Int, Int>, currentPlayer: Player): Boolean {
+    return if (currentPlayer == Player.PLAYER1) {
+        player2Positions.contains(position)
+    } else {
+        player1Positions.contains(position)
+    }
+}
+
+private fun isEmptyPosition(col: Int, row: Int): Boolean {
+    return !player1Positions.contains(col to row) && !player2Positions.contains(col to row)
+}
+
