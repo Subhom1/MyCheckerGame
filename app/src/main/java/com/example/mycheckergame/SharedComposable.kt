@@ -28,13 +28,30 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.absoluteValue
 import kotlin.math.min
 
+var player1Point = mutableStateOf(0)
+var player2Point = mutableStateOf(0)
+var player1Positions = mutableStateListOf(0 to 5,2 to 5,4 to 5,6 to 5,1 to 6,3 to 6,5 to 6,7 to 6,0 to 7,2 to 7,4 to 7,6 to 7)
+var player2Positions = mutableStateListOf(1 to 0,3 to 0,5 to 0,7 to 0,0 to 1,2 to 1,4 to 1,6 to 1,1 to 2,3 to 2,5 to 2,7 to 2)
+var selectedPiece = mutableStateOf<Pair<Int, Int>?>(null)
+var ply1Kings = mutableStateListOf<Pair<Int, Int>>()
+var ply2Kings = mutableStateListOf<Pair<Int, Int>>()
+val player1KingPositions = listOf(1 to 0, 3 to 0,5 to 0, 7 to 0 )
+val player2KingPositions = listOf(0 to 7,2 to 7,4 to 7,6 to 7)
 
+var red = mutableStateOf(0)
+var green =mutableStateOf(0)
+var blue = mutableStateOf(0)
+
+var redPiece = mutableStateOf(2)
+var greenPiece =mutableStateOf(255)
+var bluePiece = mutableStateOf(0)
 fun resetPlayerPositions(currentPlayer: MutableState<Player>) {
     player1Positions.clear()
     player1Positions.addAll(listOf(0 to 5, 2 to 5, 4 to 5, 6 to 5, 1 to 6, 3 to 6, 5 to 6, 7 to 6, 0 to 7, 2 to 7, 4 to 7, 6 to 7))
@@ -312,17 +329,6 @@ private fun DrawScope.drawKingSymbol(x: Float, y: Float, radius: Float) {
     )
 }
 
-
-//var currentPlayer = mutableStateOf(Player.PLAYER1)
-var player1Point = mutableStateOf(0)
-var player2Point = mutableStateOf(0)
-var player1Positions = mutableStateListOf(0 to 5,2 to 5,4 to 5,6 to 5,1 to 6,3 to 6,5 to 6,7 to 6,0 to 7,2 to 7,4 to 7,6 to 7)
-var player2Positions = mutableStateListOf(1 to 0,3 to 0,5 to 0,7 to 0,0 to 1,2 to 1,4 to 1,6 to 1,1 to 2,3 to 2,5 to 2,7 to 2)
-var selectedPiece = mutableStateOf<Pair<Int, Int>?>(null)
-var ply1Kings = mutableStateListOf<Pair<Int, Int>>()
-var ply2Kings = mutableStateListOf<Pair<Int, Int>>()
-val player1KingPositions = listOf(1 to 0, 3 to 0,5 to 0, 7 to 0 )
-val player2KingPositions = listOf(0 to 7,2 to 7,4 to 7,6 to 7)
 @Composable
 fun DraughtsGameScreen(currentPlayer: MutableState<Player>) {
     Column(
@@ -395,9 +401,7 @@ fun ResetButton(onReset: () ->Unit) {
         onReset()
     }) { Text("Reset Game") }
 }
-var red = mutableStateOf(0)
-var green =mutableStateOf(0)
-var blue = mutableStateOf(0)
+
 @Composable
 fun ColorPicker(header:String) {
     Column{
@@ -434,9 +438,7 @@ fun ColorPicker(header:String) {
         }
     }
 }
-var redPiece = mutableStateOf(2)
-var greenPiece =mutableStateOf(255)
-var bluePiece = mutableStateOf(0)
+
 @Composable
 fun ColorPickerPiece(header:String) {
     Column{
@@ -476,7 +478,6 @@ fun ColorPickerPiece(header:String) {
 
 private fun checkChainCaptures(position: Pair<Int, Int>, currentPlayer: Player): List<Pair<Int, Int>> {
     val captures = mutableListOf<Pair<Int, Int>>()
-
     // Check for chain captures in all possible directions
     captures.addAll(checkChainCaptureInDirection(position, currentPlayer, 1, 1)) // Top right
     captures.addAll(checkChainCaptureInDirection(position, currentPlayer, 1, -1)) // Bottom right
